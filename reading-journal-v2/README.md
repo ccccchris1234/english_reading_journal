@@ -1,25 +1,25 @@
-# Reading Journal V2
+# Reading Journal V3
 
 A personal reading journal website built with React + Vite.
 
-## New in V2
+## New in V3
 
-This version adds **Reading Mode**:
+This version adds:
+
+- Tags for each article
+- Status filter
+- Tag filter
+- Vocabulary Bank page
+- Random Review button
+- Word count and estimated reading time
+- Reading Mode with two windows
+
+## Reading Mode
 
 - Left window: article text stays visible
-- Right window: comments, highlighted sentences, vocabulary, and summary
+- Right window: comments, highlighted sentences, vocabulary, summary, tags
 - Select a sentence from the article and click **Add Selection to Highlights**
 - Save notes without leaving the reading screen
-
-## Features
-
-- Add articles
-- Save article title, source, link, category, date, status, and difficulty
-- Write summaries
-- Add comments/reflections
-- Collect useful vocabulary and expressions
-- Search and filter saved articles
-- Export/import your local backup as JSON
 
 ## Important
 
