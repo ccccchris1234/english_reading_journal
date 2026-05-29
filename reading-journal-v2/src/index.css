@@ -54,7 +54,7 @@ a {
   grid-template-columns: 1fr 240px;
   gap: 22px;
   align-items: stretch;
-  margin-bottom: 22px;
+  margin-bottom: 16px;
 }
 
 .hero__content,
@@ -67,7 +67,9 @@ a {
 .article-text,
 .reader-window,
 .notes-window,
-.mini-speaking-card {
+.mini-speaking-card,
+.view-switcher,
+.vocab-bank-card {
   border: 1px solid rgba(39, 77, 126, 0.12);
   box-shadow: 0 20px 60px rgba(24, 47, 82, 0.08);
   backdrop-filter: blur(16px);
@@ -173,7 +175,9 @@ a {
 
 .primary-button:hover,
 .ghost-button:hover,
-.danger-button:hover {
+.danger-button:hover,
+.view-switcher button:hover,
+.vocab-bank-card:hover {
   transform: translateY(-1px);
 }
 
@@ -205,6 +209,32 @@ a {
   inset: 0;
   opacity: 0;
   cursor: pointer;
+}
+
+.view-switcher {
+  display: inline-flex;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  margin-bottom: 20px;
+}
+
+.view-switcher button {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: transparent;
+  color: #506179;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+}
+
+.view-switcher button.active {
+  background: #172033;
+  color: white;
 }
 
 .workspace {
@@ -246,8 +276,20 @@ a {
   color: #172033;
 }
 
+.filter-group {
+  margin-top: 14px;
+}
+
+.filter-group p {
+  margin: 0 0 8px;
+  color: #7a879b;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
 .category-tabs {
-  margin-top: 12px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -270,7 +312,7 @@ a {
 .article-list {
   display: grid;
   gap: 12px;
-  max-height: calc(100vh - 280px);
+  max-height: calc(100vh - 360px);
   overflow: auto;
   padding-right: 4px;
 }
@@ -346,14 +388,16 @@ a {
   letter-spacing: -0.05em;
 }
 
-.detail-meta {
+.detail-meta,
+.tag-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 14px;
 }
 
-.detail-meta span {
+.detail-meta span,
+.tag-row span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -363,6 +407,11 @@ a {
   color: #526579;
   font-size: 0.82rem;
   font-weight: 800;
+}
+
+.tag-row span {
+  background: #fff4d8;
+  color: #7a5610;
 }
 
 .note-block,
@@ -446,7 +495,8 @@ a {
 .editor input,
 .editor select,
 .editor textarea,
-.notes-window textarea {
+.notes-window textarea,
+.notes-window input {
   width: 100%;
   border: 1px solid rgba(37, 99, 235, 0.14);
   outline: 0;
@@ -465,7 +515,8 @@ a {
 .editor input:focus,
 .editor select:focus,
 .editor textarea:focus,
-.notes-window textarea:focus {
+.notes-window textarea:focus,
+.notes-window input:focus {
   border-color: rgba(37, 99, 235, 0.55);
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
 }
@@ -498,6 +549,47 @@ a {
 .empty-detail h2 {
   margin: 0;
   color: #172033;
+}
+
+/* Vocabulary Bank */
+
+.vocabulary-page {
+  display: grid;
+}
+
+.vocab-search {
+  min-width: min(420px, 100%);
+}
+
+.vocab-bank-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.vocab-bank-card {
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 22px;
+  background: #ffffff;
+  color: #172033;
+}
+
+.vocab-bank-card strong {
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.vocab-bank-card span {
+  color: #526579;
+  line-height: 1.45;
+}
+
+.vocab-bank-card small {
+  color: #7b8799;
+  font-weight: 800;
 }
 
 /* Reading Mode */
@@ -718,6 +810,14 @@ a {
   .editor-actions .danger-button,
   .reading-actions .primary-button,
   .reading-actions .ghost-button {
+    flex: 1;
+  }
+
+  .view-switcher {
+    width: 100%;
+  }
+
+  .view-switcher button {
     flex: 1;
   }
 }
