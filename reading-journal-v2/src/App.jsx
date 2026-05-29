@@ -89,16 +89,15 @@ const emptyArticle = {
 
 const categories = [
   "All",
-  "English Learning",
-  "Finance",
-  "Actuarial Science",
-  "Technology",
+  "Science and Technology",
+  "My Major",
+  "Finance Industry",
   "News",
-  "Daily Reading",
+  "Nature",
   "Other",
 ];
 
-const statuses = ["All", "Reading", "Saved", "Finished", "Review Later"];
+const statuses = ["All", "Reading", "Finished", "starred"];
 const editableStatuses = statuses.filter((item) => item !== "All");
 const difficulties = ["Easy", "Medium", "Hard"];
 
