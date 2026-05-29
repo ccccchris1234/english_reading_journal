@@ -195,8 +195,11 @@ export default function App() {
   function saveArticle(event) {
     event.preventDefault();
 
+    const isExistingArticle = Boolean(draft.id);
+
     const cleanArticle = normalizeArticle({
       ...draft,
+      id: isExistingArticle ? draft.id : makeId(),
       title: draft.title.trim() || "Untitled Article",
       source: draft.source.trim(),
       link: draft.link.trim(),
@@ -211,22 +214,17 @@ export default function App() {
       vocabulary: draft.vocabulary.trim(),
     });
 
-    if (cleanArticle.id) {
+    if (isExistingArticle) {
       setArticles((current) =>
         current.map((article) =>
           article.id === cleanArticle.id ? cleanArticle : article
         )
       );
-      setSelectedId(cleanArticle.id);
     } else {
-      const newArticle = {
-        ...cleanArticle,
-        id: makeId(),
-      };
-      setArticles((current) => [newArticle, ...current]);
-      setSelectedId(newArticle.id);
+      setArticles((current) => [cleanArticle, ...current]);
     }
 
+    setSelectedId(cleanArticle.id);
     setIsEditing(false);
   }
 
