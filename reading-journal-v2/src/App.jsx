@@ -81,16 +81,15 @@ const emptyArticle = {
 
 const categories = [
   "All",
-  "English Learning",
+  "Science and Technology",
+  "Math",
   "Finance",
-  "Actuarial Science",
-  "Technology",
   "News",
-  "Daily Reading",
+  "Nature",
   "Other",
 ];
 
-const statuses = ["Reading", "Saved", "Finished", "Review Later"];
+const statuses = ["Reading", "Finished", "Starred"];
 const difficulties = ["Easy", "Medium", "Hard"];
 
 function makeId() {
