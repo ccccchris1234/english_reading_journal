@@ -17,9 +17,14 @@ import {
   Columns2,
   ArrowLeft,
   ClipboardPlus,
+  Tags,
+  Library,
+  Shuffle,
+  Clock3,
+  FileText,
 } from "lucide-react";
 
-const STORAGE_KEY = "reading-journal-articles-v2";
+const STORAGE_KEY = "reading-journal-articles-v3";
 
 const seedArticles = [
   {
@@ -28,6 +33,7 @@ const seedArticles = [
     source: "BBC Learning English",
     link: "https://www.bbc.co.uk/learningenglish",
     category: "English Learning",
+    tags: "dreams, science, speaking",
     status: "Reading",
     difficulty: "Medium",
     date: "2026-05-29",
@@ -48,6 +54,7 @@ const seedArticles = [
     source: "My Template",
     link: "",
     category: "Daily Reading",
+    tags: "routine, summary, vocabulary",
     status: "Saved",
     difficulty: "Easy",
     date: "2026-05-29",
@@ -69,6 +76,7 @@ const emptyArticle = {
   source: "",
   link: "",
   category: "English Learning",
+  tags: "",
   status: "Reading",
   difficulty: "Medium",
   date: new Date().toISOString().slice(0, 10),
@@ -81,15 +89,17 @@ const emptyArticle = {
 
 const categories = [
   "All",
-  "Science and Technology",
-  "Math",
+  "English Learning",
   "Finance",
+  "Actuarial Science",
+  "Technology",
   "News",
-  "Nature",
+  "Daily Reading",
   "Other",
 ];
 
-const statuses = ["Reading", "Finished", "Starred"];
+const statuses = ["All", "Reading", "Saved", "Finished", "Review Later"];
+const editableStatuses = statuses.filter((item) => item !== "All");
 const difficulties = ["Easy", "Medium", "Hard"];
 
 function makeId() {
@@ -98,16 +108,18 @@ function makeId() {
 
 function loadArticles() {
   try {
-    const storedV2 = localStorage.getItem(STORAGE_KEY);
-    if (storedV2) {
-      const parsed = JSON.parse(storedV2);
-      return Array.isArray(parsed) ? parsed.map(normalizeArticle) : seedArticles;
-    }
+    const possibleKeys = [
+      STORAGE_KEY,
+      "reading-journal-articles-v2",
+      "reading-journal-articles-v1",
+    ];
 
-    const storedV1 = localStorage.getItem("reading-journal-articles-v1");
-    if (storedV1) {
-      const parsed = JSON.parse(storedV1);
-      return Array.isArray(parsed) ? parsed.map(normalizeArticle) : seedArticles;
+    for (const key of possibleKeys) {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed.map(normalizeArticle) : seedArticles;
+      }
     }
 
     return seedArticles;
@@ -121,6 +133,7 @@ function normalizeArticle(article) {
     ...emptyArticle,
     ...article,
     id: article.id || makeId(),
+    tags: article.tags || "",
     highlights: article.highlights || "",
   };
 }
@@ -129,6 +142,33 @@ function normalizeUrl(url) {
   if (!url) return "";
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   return `https://${url}`;
+}
+
+function splitLines(text) {
+  return String(text || "")
+    .split(/\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function splitTags(text) {
+  return String(text || "")
+    .split(/,|\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getWordCount(text) {
+  return String(text || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
+function getReadingTime(text) {
+  const words = getWordCount(text);
+  if (!words) return "0 min";
+  return `${Math.max(1, Math.ceil(words / 220))} min`;
 }
 
 function buildSpeakingPrompt(article) {
@@ -145,6 +185,9 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(() => loadArticles()[0]?.id ?? null);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [activeTag, setActiveTag] = useState("All");
+  const [view, setView] = useState("journal");
   const [isEditing, setIsEditing] = useState(false);
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [draft, setDraft] = useState(emptyArticle);
@@ -156,15 +199,44 @@ export default function App() {
   const selectedArticle =
     articles.find((article) => article.id === selectedId) ?? articles[0] ?? null;
 
+  const allTags = useMemo(() => {
+    const tagSet = new Set();
+    articles.forEach((article) => {
+      splitTags(article.tags).forEach((tag) => tagSet.add(tag));
+    });
+    return ["All", ...Array.from(tagSet).sort((a, b) => a.localeCompare(b))];
+  }, [articles]);
+
+  const vocabularyBank = useMemo(() => {
+    const items = [];
+    articles.forEach((article) => {
+      splitLines(article.vocabulary).forEach((phrase) => {
+        items.push({
+          phrase,
+          articleId: article.id,
+          title: article.title,
+          category: article.category,
+          tags: article.tags,
+          date: article.date,
+        });
+      });
+    });
+    return items;
+  }, [articles]);
+
   const filteredArticles = useMemo(() => {
     const q = query.trim().toLowerCase();
 
     return articles.filter((article) => {
       const matchesCategory = category === "All" || article.category === category;
+      const matchesStatus = statusFilter === "All" || article.status === statusFilter;
+      const articleTags = splitTags(article.tags);
+      const matchesTag = activeTag === "All" || articleTags.includes(activeTag);
       const searchable = [
         article.title,
         article.source,
         article.category,
+        article.tags,
         article.status,
         article.difficulty,
         article.summary,
@@ -175,20 +247,27 @@ export default function App() {
         .join(" ")
         .toLowerCase();
 
-      return matchesCategory && (!q || searchable.includes(q));
+      return (
+        matchesCategory &&
+        matchesStatus &&
+        matchesTag &&
+        (!q || searchable.includes(q))
+      );
     });
-  }, [articles, category, query]);
+  }, [articles, category, statusFilter, activeTag, query]);
 
   function startNewArticle() {
     setDraft({ ...emptyArticle, date: new Date().toISOString().slice(0, 10) });
     setIsEditing(true);
     setIsReadingMode(false);
+    setView("journal");
   }
 
   function startEditArticle(article) {
     setDraft({ ...normalizeArticle(article) });
     setIsEditing(true);
     setIsReadingMode(false);
+    setView("journal");
   }
 
   function saveArticle(event) {
@@ -203,6 +282,7 @@ export default function App() {
       source: draft.source.trim(),
       link: draft.link.trim(),
       category: draft.category || "Other",
+      tags: draft.tags.trim(),
       status: draft.status || "Saved",
       difficulty: draft.difficulty || "Medium",
       date: draft.date || new Date().toISOString().slice(0, 10),
@@ -278,12 +358,29 @@ export default function App() {
         setSelectedId(withIds[0]?.id ?? null);
         setIsEditing(false);
         setIsReadingMode(false);
+        setView("journal");
       } catch {
         alert("Could not import this JSON file.");
       }
     };
     reader.readAsText(file);
     event.target.value = "";
+  }
+
+  function reviewRandomArticle() {
+    if (!articles.length) return;
+    const randomArticle = articles[Math.floor(Math.random() * articles.length)];
+    setSelectedId(randomArticle.id);
+    setView("journal");
+    setIsEditing(false);
+    setIsReadingMode(true);
+  }
+
+  function openArticleFromVocabulary(articleId) {
+    setSelectedId(articleId);
+    setView("journal");
+    setIsEditing(false);
+    setIsReadingMode(false);
   }
 
   if (isReadingMode && selectedArticle) {
@@ -314,6 +411,10 @@ export default function App() {
               <Plus size={18} />
               Add Article
             </button>
+            <button className="ghost-button" onClick={reviewRandomArticle}>
+              <Shuffle size={18} />
+              Random Review
+            </button>
             <button className="ghost-button" onClick={exportArticles}>
               <Download size={18} />
               Export Backup
@@ -332,93 +433,153 @@ export default function App() {
         </div>
       </section>
 
-      <section className="workspace">
-        <aside className="sidebar">
-          <div className="search-card">
-            <div className="search-box">
-              <Search size={18} />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search title, summary, vocabulary..."
-              />
-            </div>
+      <nav className="view-switcher">
+        <button
+          className={view === "journal" ? "active" : ""}
+          onClick={() => setView("journal")}
+        >
+          <BookOpen size={18} />
+          Journal
+        </button>
+        <button
+          className={view === "vocabulary" ? "active" : ""}
+          onClick={() => setView("vocabulary")}
+        >
+          <Library size={18} />
+          Vocabulary Bank
+        </button>
+      </nav>
 
-            <div className="category-tabs">
-              {categories.map((item) => (
-                <button
-                  key={item}
-                  className={category === item ? "active" : ""}
-                  onClick={() => setCategory(item)}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="article-list">
-            {filteredArticles.length === 0 ? (
-              <div className="empty-state">
-                <p>No article found.</p>
-                <button onClick={startNewArticle}>Add your first one</button>
+      {view === "vocabulary" ? (
+        <VocabularyBank
+          items={vocabularyBank}
+          query={query}
+          setQuery={setQuery}
+          onOpenArticle={openArticleFromVocabulary}
+        />
+      ) : (
+        <section className="workspace">
+          <aside className="sidebar">
+            <div className="search-card">
+              <div className="search-box">
+                <Search size={18} />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search title, summary, tags, vocabulary..."
+                />
               </div>
-            ) : (
-              filteredArticles.map((article) => (
-                <button
-                  key={article.id}
-                  className={`article-card ${
-                    selectedArticle?.id === article.id ? "selected" : ""
-                  }`}
-                  onClick={() => {
-                    setSelectedId(article.id);
-                    setIsEditing(false);
-                    setIsReadingMode(false);
-                  }}
-                >
-                  <span className="article-card__category">{article.category}</span>
-                  <strong>{article.title}</strong>
-                  <span className="article-card__summary">
-                    {article.summary || "No summary yet."}
-                  </span>
-                  <span className="article-card__meta">
-                    {article.status} · {article.date}
-                  </span>
-                </button>
-              ))
-            )}
-          </div>
-        </aside>
 
-        <section className="content-card">
-          {isEditing ? (
-            <ArticleEditor
-              draft={draft}
-              setDraft={setDraft}
-              onSave={saveArticle}
-              onCancel={() => setIsEditing(false)}
-            />
-          ) : selectedArticle ? (
-            <ArticleDetail
-              article={selectedArticle}
-              onRead={() => setIsReadingMode(true)}
-              onEdit={() => startEditArticle(selectedArticle)}
-              onDelete={() => deleteArticle(selectedArticle.id)}
-            />
-          ) : (
-            <div className="empty-detail">
-              <BookOpen size={42} />
-              <h2>Your reading desk is empty.</h2>
-              <p>Add an article to begin.</p>
-              <button className="primary-button" onClick={startNewArticle}>
-                <Plus size={18} />
-                Add Article
-              </button>
+              <FilterGroup title="Categories">
+                {categories.map((item) => (
+                  <button
+                    key={item}
+                    className={category === item ? "active" : ""}
+                    onClick={() => setCategory(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </FilterGroup>
+
+              <FilterGroup title="Status">
+                {statuses.map((item) => (
+                  <button
+                    key={item}
+                    className={statusFilter === item ? "active" : ""}
+                    onClick={() => setStatusFilter(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </FilterGroup>
+
+              <FilterGroup title="Tags">
+                {allTags.map((item) => (
+                  <button
+                    key={item}
+                    className={activeTag === item ? "active" : ""}
+                    onClick={() => setActiveTag(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </FilterGroup>
             </div>
-          )}
+
+            <div className="article-list">
+              {filteredArticles.length === 0 ? (
+                <div className="empty-state">
+                  <p>No article found.</p>
+                  <button onClick={startNewArticle}>Add your first one</button>
+                </div>
+              ) : (
+                filteredArticles.map((article) => (
+                  <button
+                    key={article.id}
+                    className={`article-card ${
+                      selectedArticle?.id === article.id ? "selected" : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedId(article.id);
+                      setIsEditing(false);
+                      setIsReadingMode(false);
+                    }}
+                  >
+                    <span className="article-card__category">{article.category}</span>
+                    <strong>{article.title}</strong>
+                    <span className="article-card__summary">
+                      {article.summary || "No summary yet."}
+                    </span>
+                    <span className="article-card__meta">
+                      {article.status} · {article.date} ·{" "}
+                      {getWordCount(article.articleText)} words
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </aside>
+
+          <section className="content-card">
+            {isEditing ? (
+              <ArticleEditor
+                draft={draft}
+                setDraft={setDraft}
+                onSave={saveArticle}
+                onCancel={() => setIsEditing(false)}
+              />
+            ) : selectedArticle ? (
+              <ArticleDetail
+                article={selectedArticle}
+                onRead={() => setIsReadingMode(true)}
+                onEdit={() => startEditArticle(selectedArticle)}
+                onDelete={() => deleteArticle(selectedArticle.id)}
+              />
+            ) : (
+              <div className="empty-detail">
+                <BookOpen size={42} />
+                <h2>Your reading desk is empty.</h2>
+                <p>Add an article to begin.</p>
+                <button className="primary-button" onClick={startNewArticle}>
+                  <Plus size={18} />
+                  Add Article
+                </button>
+              </div>
+            )}
+          </section>
         </section>
-      </section>
+      )}
     </main>
+  );
+}
+
+function FilterGroup({ title, children }) {
+  return (
+    <div className="filter-group">
+      <p>{title}</p>
+      <div className="category-tabs">{children}</div>
+    </div>
   );
 }
 
@@ -503,7 +664,7 @@ function ArticleEditor({ draft, setDraft, onSave, onCancel }) {
             value={draft.status}
             onChange={(event) => updateField("status", event.target.value)}
           >
-            {statuses.map((item) => (
+            {editableStatuses.map((item) => (
               <option key={item}>{item}</option>
             ))}
           </select>
@@ -519,6 +680,15 @@ function ArticleEditor({ draft, setDraft, onSave, onCancel }) {
               <option key={item}>{item}</option>
             ))}
           </select>
+        </label>
+
+        <label>
+          Tags
+          <input
+            value={draft.tags}
+            onChange={(event) => updateField("tags", event.target.value)}
+            placeholder="finance, interview, inflation"
+          />
         </label>
       </div>
 
@@ -576,15 +746,12 @@ function ArticleEditor({ draft, setDraft, onSave, onCancel }) {
 }
 
 function ArticleDetail({ article, onRead, onEdit, onDelete }) {
-  const vocabList = article.vocabulary
-    .split(/\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-  const highlightList = article.highlights
+  const vocabList = splitLines(article.vocabulary);
+  const highlightList = String(article.highlights || "")
     .split(/\n/)
     .map((item) => item.trim())
     .filter(Boolean);
+  const tagList = splitTags(article.tags);
 
   return (
     <article className="detail">
@@ -599,8 +766,26 @@ function ArticleDetail({ article, onRead, onEdit, onDelete }) {
             </span>
             <span>{article.status}</span>
             <span>{article.difficulty}</span>
+            <span>
+              <FileText size={15} />
+              {getWordCount(article.articleText)} words
+            </span>
+            <span>
+              <Clock3 size={15} />
+              {getReadingTime(article.articleText)}
+            </span>
             {article.source && <span>{article.source}</span>}
           </div>
+          {tagList.length > 0 && (
+            <div className="tag-row">
+              {tagList.map((tag) => (
+                <span key={tag}>
+                  <Tags size={13} />
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="editor-actions">
@@ -678,6 +863,66 @@ function ArticleDetail({ article, onRead, onEdit, onDelete }) {
   );
 }
 
+function VocabularyBank({ items, query, setQuery, onOpenArticle }) {
+  const filteredItems = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((item) =>
+      [item.phrase, item.title, item.category, item.tags]
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [items, query]);
+
+  return (
+    <section className="vocabulary-page">
+      <div className="content-card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">
+              <Library size={15} />
+              Vocabulary Bank
+            </p>
+            <h2>{items.length} saved expressions</h2>
+          </div>
+          <div className="search-box vocab-search">
+            <Search size={18} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search vocabulary or article title..."
+            />
+          </div>
+        </div>
+
+        {filteredItems.length === 0 ? (
+          <div className="empty-detail">
+            <Library size={42} />
+            <h2>No vocabulary found.</h2>
+            <p>Add useful expressions in an article first.</p>
+          </div>
+        ) : (
+          <div className="vocab-bank-grid">
+            {filteredItems.map((item, index) => (
+              <button
+                key={`${item.articleId}-${item.phrase}-${index}`}
+                className="vocab-bank-card"
+                onClick={() => onOpenArticle(item.articleId)}
+              >
+                <strong>{item.phrase}</strong>
+                <span>{item.title}</span>
+                <small>
+                  {item.category} · {item.date}
+                </small>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function ReadingMode({ article, onBack, onSave }) {
   const [notes, setNotes] = useState(() => normalizeArticle(article));
   const [savedMessage, setSavedMessage] = useState("");
@@ -752,7 +997,9 @@ function ReadingMode({ article, onBack, onSave }) {
               <p className="eyebrow">Article Window</p>
               <h1>{article.title}</h1>
               <p>
-                {article.source || "No source"} · {article.date}
+                {article.source || "No source"} · {article.date} ·{" "}
+                {getWordCount(article.articleText)} words ·{" "}
+                {getReadingTime(article.articleText)} read
               </p>
             </div>
             <button className="ghost-button" onClick={addSelectionToHighlights}>
@@ -787,6 +1034,15 @@ function ReadingMode({ article, onBack, onSave }) {
             </p>
             <h2>Comments & Highlights</h2>
           </div>
+
+          <label>
+            Tags
+            <input
+              value={notes.tags}
+              onChange={(event) => updateField("tags", event.target.value)}
+              placeholder="finance, interview, inflation"
+            />
+          </label>
 
           <label>
             Highlighted Sentences
