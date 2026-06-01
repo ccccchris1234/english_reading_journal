@@ -26,50 +26,7 @@ import {
 
 const STORAGE_KEY = "reading-journal-articles-v3";
 
-const seedArticles = [
-  {
-    id: "sample-1",
-    title: "Why do we dream?",
-    source: "BBC Learning English",
-    link: "https://www.bbc.co.uk/learningenglish",
-    category: "English Learning",
-    tags: "dreams, science, speaking",
-    status: "Reading",
-    difficulty: "Medium",
-    date: "2026-05-29",
-    articleText:
-      "Paste the article text here if you want to keep a copy for practice.\n\nWhen you enter Reading Mode, this article will stay visible on the left side. On the right side, you can write comments, save useful expressions, and collect highlighted sentences.\n\nTry selecting this sentence, then click “Add Selection to Highlights” in Reading Mode.",
-    summary:
-      "This article discusses possible reasons for dreaming, including memory, emotion, and brain activity during sleep.",
-    comments:
-      "Useful for speaking practice because the topic is easy to explain but still interesting. I can use it to practice opinion sentences.",
-    highlights:
-      "Try selecting this sentence, then click “Add Selection to Highlights” in Reading Mode.",
-    vocabulary:
-      "be related to\nplay a role in\nfrom a psychological perspective\nbrain activity\nmemory consolidation",
-  },
-  {
-    id: "sample-2",
-    title: "A short reading note template",
-    source: "My Template",
-    link: "",
-    category: "Daily Reading",
-    tags: "routine, summary, vocabulary",
-    status: "Saved",
-    difficulty: "Easy",
-    date: "2026-05-29",
-    articleText:
-      "Use this page as a reusable structure. Add one article, write a clear summary, then record yourself explaining it.\n\nA good reading session should leave three things behind: a short summary, several useful expressions, and one spoken explanation.",
-    summary:
-      "The purpose of this website is to help me collect articles and turn reading into speaking practice.",
-    comments:
-      "After reading, I should explain the article in four sentences: main topic, key point, why it matters, and my opinion.",
-    highlights:
-      "A good reading session should leave three things behind: a short summary, several useful expressions, and one spoken explanation.",
-    vocabulary:
-      "The article is mainly about...\nOne important point is...\nThis matters because...\nFrom my perspective...",
-  },
-];
+
 
 const emptyArticle = {
   title: "",
