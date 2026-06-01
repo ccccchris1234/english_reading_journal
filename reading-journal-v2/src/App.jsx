@@ -26,13 +26,11 @@ import {
 
 const STORAGE_KEY = "reading-journal-articles-v3";
 
-
-
 const emptyArticle = {
   title: "",
   source: "",
   link: "",
-  category: "English Learning",
+  category: "Other",
   tags: "",
   status: "Reading",
   difficulty: "Medium",
@@ -72,15 +70,16 @@ function loadArticles() {
 
     for (const key of possibleKeys) {
       const stored = localStorage.getItem(key);
+
       if (stored) {
         const parsed = JSON.parse(stored);
-        return Array.isArray(parsed) ? parsed.map(normalizeArticle) : seedArticles;
+        return Array.isArray(parsed) ? parsed.map(normalizeArticle) : [];
       }
     }
 
-    return seedArticles;
+    return [];
   } catch {
-    return seedArticles;
+    return [];
   }
 }
 
@@ -89,8 +88,14 @@ function normalizeArticle(article) {
     ...emptyArticle,
     ...article,
     id: article.id || makeId(),
+    category: categories.includes(article.category) ? article.category : "Other",
+    status: editableStatuses.includes(article.status) ? article.status : "Reading",
+    difficulty: difficulties.includes(article.difficulty)
+      ? article.difficulty
+      : "Medium",
     tags: article.tags || "",
     highlights: article.highlights || "",
+    vocabulary: article.vocabulary || "",
   };
 }
 
@@ -157,14 +162,17 @@ export default function App() {
 
   const allTags = useMemo(() => {
     const tagSet = new Set();
+
     articles.forEach((article) => {
       splitTags(article.tags).forEach((tag) => tagSet.add(tag));
     });
+
     return ["All", ...Array.from(tagSet).sort((a, b) => a.localeCompare(b))];
   }, [articles]);
 
   const vocabularyBank = useMemo(() => {
     const items = [];
+
     articles.forEach((article) => {
       splitLines(article.vocabulary).forEach((phrase) => {
         items.push({
@@ -177,6 +185,7 @@ export default function App() {
         });
       });
     });
+
     return items;
   }, [articles]);
 
@@ -188,6 +197,7 @@ export default function App() {
       const matchesStatus = statusFilter === "All" || article.status === statusFilter;
       const articleTags = splitTags(article.tags);
       const matchesTag = activeTag === "All" || articleTags.includes(activeTag);
+
       const searchable = [
         article.title,
         article.source,
@@ -213,7 +223,11 @@ export default function App() {
   }, [articles, category, statusFilter, activeTag, query]);
 
   function startNewArticle() {
-    setDraft({ ...emptyArticle, date: new Date().toISOString().slice(0, 10) });
+    setDraft({
+      ...emptyArticle,
+      id: "",
+      date: new Date().toISOString().slice(0, 10),
+    });
     setIsEditing(true);
     setIsReadingMode(false);
     setView("journal");
@@ -239,7 +253,7 @@ export default function App() {
       link: draft.link.trim(),
       category: draft.category || "Other",
       tags: draft.tags.trim(),
-      status: draft.status || "Saved",
+      status: draft.status || "Reading",
       difficulty: draft.difficulty || "Medium",
       date: draft.date || new Date().toISOString().slice(0, 10),
       articleText: draft.articleText.trim(),
@@ -265,9 +279,13 @@ export default function App() {
 
   function saveReadingNotes(updatedArticle) {
     const cleanArticle = normalizeArticle(updatedArticle);
+
     setArticles((current) =>
-      current.map((article) => (article.id === cleanArticle.id ? cleanArticle : article))
+      current.map((article) =>
+        article.id === cleanArticle.id ? cleanArticle : article
+      )
     );
+
     setSelectedId(cleanArticle.id);
   }
 
@@ -280,6 +298,7 @@ export default function App() {
       setSelectedId(remaining[0]?.id ?? null);
       return remaining;
     });
+
     setIsEditing(false);
     setIsReadingMode(false);
   }
@@ -288,11 +307,13 @@ export default function App() {
     const file = new Blob([JSON.stringify(articles, null, 2)], {
       type: "application/json",
     });
+
     const url = URL.createObjectURL(file);
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = "reading-journal-backup.json";
     anchor.click();
+
     URL.revokeObjectURL(url);
   }
 
@@ -301,15 +322,18 @@ export default function App() {
     if (!file) return;
 
     const reader = new FileReader();
+
     reader.onload = () => {
       try {
         const imported = JSON.parse(String(reader.result));
+
         if (!Array.isArray(imported)) {
           alert("The file is not a valid article list.");
           return;
         }
 
         const withIds = imported.map(normalizeArticle);
+
         setArticles(withIds);
         setSelectedId(withIds[0]?.id ?? null);
         setIsEditing(false);
@@ -319,13 +343,16 @@ export default function App() {
         alert("Could not import this JSON file.");
       }
     };
+
     reader.readAsText(file);
     event.target.value = "";
   }
 
   function reviewRandomArticle() {
     if (!articles.length) return;
+
     const randomArticle = articles[Math.floor(Math.random() * articles.length)];
+
     setSelectedId(randomArticle.id);
     setView("journal");
     setIsEditing(false);
@@ -357,24 +384,30 @@ export default function App() {
             <Sparkles size={16} />
             Personal English Reading Lab
           </p>
+
           <h1>Reading Journal</h1>
+
           <p className="hero__subtitle">
             Save articles, write summaries, collect useful expressions, and turn
             reading into speaking practice.
           </p>
+
           <div className="hero__actions">
             <button className="primary-button" onClick={startNewArticle}>
               <Plus size={18} />
               Add Article
             </button>
+
             <button className="ghost-button" onClick={reviewRandomArticle}>
               <Shuffle size={18} />
               Random Review
             </button>
+
             <button className="ghost-button" onClick={exportArticles}>
               <Download size={18} />
               Export Backup
             </button>
+
             <label className="ghost-button file-button">
               <Upload size={18} />
               Import
@@ -382,6 +415,7 @@ export default function App() {
             </label>
           </div>
         </div>
+
         <div className="hero__panel">
           <BookOpen size={34} />
           <p className="panel-number">{articles.length}</p>
@@ -397,6 +431,7 @@ export default function App() {
           <BookOpen size={18} />
           Journal
         </button>
+
         <button
           className={view === "vocabulary" ? "active" : ""}
           onClick={() => setView("vocabulary")}
@@ -419,6 +454,7 @@ export default function App() {
             <div className="search-card">
               <div className="search-box">
                 <Search size={18} />
+
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
@@ -484,9 +520,11 @@ export default function App() {
                   >
                     <span className="article-card__category">{article.category}</span>
                     <strong>{article.title}</strong>
+
                     <span className="article-card__summary">
                       {article.summary || "No summary yet."}
                     </span>
+
                     <span className="article-card__meta">
                       {article.status} · {article.date} ·{" "}
                       {getWordCount(article.articleText)} words
@@ -515,8 +553,10 @@ export default function App() {
             ) : (
               <div className="empty-detail">
                 <BookOpen size={42} />
+
                 <h2>Your reading desk is empty.</h2>
                 <p>Add an article to begin.</p>
+
                 <button className="primary-button" onClick={startNewArticle}>
                   <Plus size={18} />
                   Add Article
@@ -551,11 +591,13 @@ function ArticleEditor({ draft, setDraft, onSave, onCancel }) {
           <p className="eyebrow">Editor</p>
           <h2>{draft.id ? "Edit Article" : "Add New Article"}</h2>
         </div>
+
         <div className="editor-actions">
           <button type="button" className="ghost-button" onClick={onCancel}>
             <X size={18} />
             Cancel
           </button>
+
           <button type="submit" className="primary-button">
             <Save size={18} />
             Save
@@ -693,7 +735,9 @@ function ArticleEditor({ draft, setDraft, onSave, onCancel }) {
         <textarea
           value={draft.vocabulary}
           onChange={(event) => updateField("vocabulary", event.target.value)}
-          placeholder={"One expression per line:\nplay a key role in\nbe driven by\nfrom my perspective"}
+          placeholder={
+            "One expression per line:\nplay a key role in\nbe driven by\nfrom my perspective"
+          }
           rows={5}
         />
       </label>
@@ -703,10 +747,12 @@ function ArticleEditor({ draft, setDraft, onSave, onCancel }) {
 
 function ArticleDetail({ article, onRead, onEdit, onDelete }) {
   const vocabList = splitLines(article.vocabulary);
+
   const highlightList = String(article.highlights || "")
     .split(/\n/)
     .map((item) => item.trim())
     .filter(Boolean);
+
   const tagList = splitTags(article.tags);
 
   return (
@@ -715,23 +761,29 @@ function ArticleDetail({ article, onRead, onEdit, onDelete }) {
         <div>
           <p className="eyebrow">{article.category}</p>
           <h2>{article.title}</h2>
+
           <div className="detail-meta">
             <span>
               <CalendarDays size={15} />
               {article.date}
             </span>
+
             <span>{article.status}</span>
             <span>{article.difficulty}</span>
+
             <span>
               <FileText size={15} />
               {getWordCount(article.articleText)} words
             </span>
+
             <span>
               <Clock3 size={15} />
               {getReadingTime(article.articleText)}
             </span>
+
             {article.source && <span>{article.source}</span>}
           </div>
+
           {tagList.length > 0 && (
             <div className="tag-row">
               {tagList.map((tag) => (
@@ -749,6 +801,7 @@ function ArticleDetail({ article, onRead, onEdit, onDelete }) {
             <Columns2 size={18} />
             Reading Mode
           </button>
+
           {article.link && (
             <a
               className="ghost-button"
@@ -760,10 +813,12 @@ function ArticleDetail({ article, onRead, onEdit, onDelete }) {
               Open
             </a>
           )}
+
           <button className="ghost-button" onClick={onEdit}>
             <PenLine size={18} />
             Edit
           </button>
+
           <button className="danger-button" onClick={onDelete}>
             <Trash2 size={18} />
             Delete
@@ -772,11 +827,12 @@ function ArticleDetail({ article, onRead, onEdit, onDelete }) {
       </div>
 
       <InfoBlock title="My Summary" content={article.summary} />
-      <InfoBlock title="My Comments" content={article.comments} icon={<MessageSquareText />} />
+      <InfoBlock title="My Comments" content={article.comments} />
 
       {highlightList.length > 0 && (
         <section className="note-block">
           <h3>Highlighted Sentences</h3>
+
           <ul className="highlight-list">
             {highlightList.map((sentence, index) => (
               <li key={`${sentence}-${index}`}>{sentence}</li>
@@ -788,6 +844,7 @@ function ArticleDetail({ article, onRead, onEdit, onDelete }) {
       {vocabList.length > 0 && (
         <section className="note-block">
           <h3>Useful Vocabulary</h3>
+
           <div className="vocab-list">
             {vocabList.map((word) => (
               <span key={word}>{word}</span>
@@ -798,10 +855,12 @@ function ArticleDetail({ article, onRead, onEdit, onDelete }) {
 
       <section className="speaking-card">
         <h3>2-minute speaking prompt</h3>
+
         <p>
           Record yourself explaining this article. Use these four lines as your
           speaking skeleton:
         </p>
+
         <ol>
           {buildSpeakingPrompt(article).map((line) => (
             <li key={line}>{line}</li>
@@ -822,6 +881,7 @@ function ArticleDetail({ article, onRead, onEdit, onDelete }) {
 function VocabularyBank({ items, query, setQuery, onOpenArticle }) {
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
+
     return items.filter((item) =>
       [item.phrase, item.title, item.category, item.tags]
         .join(" ")
@@ -839,10 +899,13 @@ function VocabularyBank({ items, query, setQuery, onOpenArticle }) {
               <Library size={15} />
               Vocabulary Bank
             </p>
+
             <h2>{items.length} saved expressions</h2>
           </div>
+
           <div className="search-box vocab-search">
             <Search size={18} />
+
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -900,6 +963,7 @@ function ReadingMode({ article, onBack, onSave }) {
 
   function addSelectionToHighlights() {
     const selectedText = String(window.getSelection?.() || "").trim();
+
     if (!selectedText) {
       alert("Select a sentence from the article first.");
       return;
@@ -911,6 +975,7 @@ function ReadingMode({ article, onBack, onSave }) {
         ? `${current.highlights}\n${selectedText}`
         : selectedText,
     }));
+
     setSavedMessage("");
     window.getSelection?.().removeAllRanges?.();
   }
@@ -922,10 +987,12 @@ function ReadingMode({ article, onBack, onSave }) {
           <ArrowLeft size={18} />
           Back
         </button>
+
         <div className="reading-title">
           <span>{article.category}</span>
           <strong>{article.title}</strong>
         </div>
+
         <div className="reading-actions">
           {article.link && (
             <a
@@ -938,10 +1005,12 @@ function ReadingMode({ article, onBack, onSave }) {
               Open Original
             </a>
           )}
+
           <button className="primary-button" onClick={saveNotes}>
             <Save size={18} />
             Save Notes
           </button>
+
           {savedMessage && <span className="saved-pill">{savedMessage}</span>}
         </div>
       </header>
@@ -951,13 +1020,16 @@ function ReadingMode({ article, onBack, onSave }) {
           <div className="reader-window__header">
             <div>
               <p className="eyebrow">Article Window</p>
+
               <h1>{article.title}</h1>
+
               <p>
                 {article.source || "No source"} · {article.date} ·{" "}
                 {getWordCount(article.articleText)} words ·{" "}
                 {getReadingTime(article.articleText)} read
               </p>
             </div>
+
             <button className="ghost-button" onClick={addSelectionToHighlights}>
               <ClipboardPlus size={18} />
               Add Selection to Highlights
@@ -972,7 +1044,9 @@ function ReadingMode({ article, onBack, onSave }) {
             ) : (
               <div className="empty-reader">
                 <BookOpen size={38} />
+
                 <h2>No article text yet.</h2>
+
                 <p>
                   Go back, click Edit, and paste the article text into the Article
                   Text field. Then return to Reading Mode.
@@ -988,6 +1062,7 @@ function ReadingMode({ article, onBack, onSave }) {
               <Highlighter size={15} />
               Notes Window
             </p>
+
             <h2>Comments & Highlights</h2>
           </div>
 
@@ -1042,6 +1117,7 @@ function ReadingMode({ article, onBack, onSave }) {
 
           <section className="mini-speaking-card">
             <h3>Speaking skeleton</h3>
+
             <ol>
               {buildSpeakingPrompt(article).map((line) => (
                 <li key={line}>{line}</li>
