@@ -49,6 +49,7 @@ const categories = [
   "Finance Industry",
   "News",
   "Nature",
+  "Agriculture",
   "Other",
 ];
 
