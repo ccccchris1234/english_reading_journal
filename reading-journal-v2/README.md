@@ -1,6 +1,6 @@
 # Reading Journal V3
 
-A personal reading journal website built with React + Vite.
+A personal website for English reading practice.
 
 ## New in V3
 
